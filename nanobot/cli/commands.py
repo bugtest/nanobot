@@ -231,9 +231,13 @@ def _make_provider(config: Config, model: str | None = None):
     model = model or config.agents.defaults.model
     
     # Detect provider from model name
-    model_only = model.split("/")[-1] if "/" in model else model
-    spec = find_by_model(model_only)
-    provider_name = spec.name if spec else None
+    # Handle "ollama/model" format specially - extract provider before splitting
+    if model.startswith("ollama/"):
+        provider_name = "ollama"
+    else:
+        model_only = model.split("/")[-1] if "/" in model else model
+        spec = find_by_model(model_only)
+        provider_name = spec.name if spec else None
     
     # Get API key and base based on provider
     if provider_name == "ollama":
