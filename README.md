@@ -86,6 +86,41 @@ Config file: `~/.nanobot/config.json`
 | Provider | Purpose | Get API Key |
 |----------|---------|-------------|
 | `openrouter` | LLM (recommended, access to all models) | [openrouter.ai](https://openrouter.ai) |
+| `ollama` | Local LLM (free, private) | [ollama.com](https://ollama.com) |
+
+**OpenRouter Configuration:**
+```json
+{
+  "providers": {
+    "openrouter": {
+      "apiKey": "sk-or-v1-xxx"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "openrouter/anthropic/claude-3-5-sonnet"
+    }
+  }
+}
+```
+
+**Ollama Configuration:**
+```json
+{
+  "providers": {
+    "ollama": {
+      "apiBase": "http://localhost:11434"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "ollama/llama3.2"
+    }
+  }
+}
+```
+
+First pull a model: `ollama pull llama3.2`
 
 ### Agent Defaults
 

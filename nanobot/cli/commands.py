@@ -226,21 +226,36 @@ Your custom instructions here...
 def _make_provider(config: Config, model: str | None = None):
     """Create LLM provider from config."""
     from nanobot.providers.litellm_provider import LiteLLMProvider
+    from nanobot.providers.registry import find_by_model
 
     model = model or config.agents.defaults.model
-    api_key = config.get_api_key()
-    api_base = config.get_api_base()
+    
+    # Detect provider from model name
+    model_only = model.split("/")[-1] if "/" in model else model
+    spec = find_by_model(model_only)
+    provider_name = spec.name if spec else None
+    
+    # Get API key and base based on provider
+    if provider_name == "ollama":
+        api_key = config.get_api_key("ollama") or ""  # Ollama doesn't require key
+        api_base = config.get_api_base("ollama")
+    else:
+        api_key = config.get_api_key()
+        api_base = config.get_api_base()
 
-    if not api_key:
+    if not api_key and provider_name != "ollama":
         console.print("[red]Error: No API key configured.[/red]")
         console.print("Set one in ~/.nanobot/config.json:")
         console.print('  {"providers": {"openrouter": {"apiKey": "sk-or-v1-xxx"}}}')
+        console.print("\nOr use Ollama for local models:")
+        console.print('  {"agents": {"defaults": {"model": "ollama/llama3.2"}}}')
         raise typer.Exit(1)
 
     return LiteLLMProvider(
         api_key=api_key,
         api_base=api_base,
         default_model=model,
+        provider_name=provider_name,
     )
 
 
@@ -367,9 +382,16 @@ def status():
     if config_path.exists():
         console.print(f"Model: {config.agents.defaults.model}")
 
-        api_key = config.get_api_key()
-        has_key = bool(api_key)
-        console.print(f"OpenRouter API Key: {'[green]✓[/green]' if has_key else '[dim]not set[/dim]'}")
+        # OpenRouter
+        openrouter_key = config.get_api_key()
+        has_openrouter_key = bool(openrouter_key)
+        console.print(f"OpenRouter API Key: {'[green]✓[/green]' if has_openrouter_key else '[dim]not set[/dim]'}")
+
+        # Ollama
+        ollama_key = config.get_api_key("ollama")
+        ollama_base = config.get_api_base("ollama")
+        ollama_configured = bool(ollama_base) or bool(ollama_key)
+        console.print(f"Ollama: {'[green]✓[/green] ' + ollama_base if ollama_configured else '[dim]http://localhost:11434 (default)[/dim]'}")
 
 
 # ============================================================================

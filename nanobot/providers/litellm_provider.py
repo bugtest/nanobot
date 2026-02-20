@@ -1,4 +1,4 @@
-"""LiteLLM provider for OpenRouter."""
+"""LiteLLM provider for OpenRouter and Ollama."""
 
 import json
 import json_repair
@@ -12,24 +12,28 @@ from nanobot.providers.base import LLMProvider, LLMResponse, ToolCallRequest
 
 
 class LiteLLMProvider(LLMProvider):
-    """LLM provider using LiteLLM for OpenRouter."""
+    """LLM provider using LiteLLM for OpenRouter and Ollama."""
 
     def __init__(
         self,
         api_key: str | None = None,
         api_base: str | None = None,
         default_model: str = "openrouter/anthropic/claude-3-5-sonnet",
+        provider_name: str | None = None,
     ):
         super().__init__(api_key, api_base)
         self.default_model = default_model
+        self.provider_name = provider_name
 
-        # Set OpenRouter API key
-        if api_key:
+        # Set API key for OpenRouter
+        if api_key and provider_name != "ollama":
             os.environ["OPENROUTER_API_KEY"] = api_key
 
         # Set API base URL
         if api_base:
             litellm.api_base = api_base
+        elif provider_name == "ollama":
+            litellm.api_base = "http://localhost:11434"
         else:
             litellm.api_base = "https://openrouter.ai/api/v1"
 
@@ -56,8 +60,13 @@ class LiteLLMProvider(LLMProvider):
             "temperature": temperature,
         }
 
-        if self.api_key:
+        # Pass api_key for OpenRouter
+        if self.api_key and self.provider_name != "ollama":
             kwargs["api_key"] = self.api_key
+
+        # Pass api_base for custom endpoints
+        if self.api_base:
+            kwargs["api_base"] = self.api_base
 
         if tools:
             kwargs["tools"] = tools

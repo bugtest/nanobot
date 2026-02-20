@@ -39,6 +39,7 @@ class ProvidersConfig(Base):
     """Configuration for LLM providers."""
 
     openrouter: ProviderConfig = Field(default_factory=ProviderConfig)
+    ollama: ProviderConfig = Field(default_factory=ProviderConfig)
 
 
 class WebSearchConfig(Base):
@@ -80,12 +81,17 @@ class Config(BaseSettings):
         """Get expanded workspace path."""
         return Path(self.agents.defaults.workspace).expanduser()
 
-    def get_api_key(self) -> str | None:
-        """Get OpenRouter API key."""
+    def get_api_key(self, provider: str | None = None) -> str | None:
+        """Get API key for the specified provider."""
+        if provider == "ollama":
+            return self.providers.ollama.api_key
         return self.providers.openrouter.api_key
 
-    def get_api_base(self) -> str | None:
-        """Get API base URL."""
+    def get_api_base(self, provider: str | None = None) -> str | None:
+        """Get API base URL for the specified provider."""
+        if provider == "ollama":
+            p = self.providers.ollama
+            return p.api_base if p.api_base else "http://localhost:11434"
         p = self.providers.openrouter
         if p.api_base:
             return p.api_base

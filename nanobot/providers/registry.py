@@ -1,5 +1,5 @@
 """
-Provider Registry — simplified for OpenRouter only.
+Provider Registry — supports OpenRouter and Ollama.
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ class ProviderSpec:
 
 
 PROVIDERS: tuple[ProviderSpec, ...] = (
+    # OpenRouter: cloud gateway
     ProviderSpec(
         name="openrouter",
         keywords=("openrouter",),
@@ -48,6 +49,24 @@ PROVIDERS: tuple[ProviderSpec, ...] = (
         detect_by_key_prefix="sk-or-",
         detect_by_base_keyword="openrouter",
         default_api_base="https://openrouter.ai/api/v1",
+        strip_model_prefix=False,
+        model_overrides=(),
+    ),
+
+    # Ollama: local LLM runner
+    ProviderSpec(
+        name="ollama",
+        keywords=("ollama",),
+        env_key="",  # Ollama doesn't require API key by default
+        display_name="Ollama",
+        litellm_prefix="ollama",
+        skip_prefixes=("ollama/",),
+        env_extras=(),
+        is_gateway=False,
+        is_local=True,
+        detect_by_key_prefix="",
+        detect_by_base_keyword="ollama",
+        default_api_base="http://localhost:11434",
         strip_model_prefix=False,
         model_overrides=(),
     ),
@@ -68,7 +87,7 @@ def find_gateway(
     api_key: str | None = None,
     api_base: str | None = None,
 ) -> ProviderSpec | None:
-    """Detect gateway provider."""
+    """Detect gateway/local provider."""
     if provider_name:
         spec = find_by_name(provider_name)
         if spec and (spec.is_gateway or spec.is_local):
