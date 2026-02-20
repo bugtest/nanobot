@@ -35,9 +35,7 @@ check "nanobot Status"
 check "Config:"
 check "Workspace:"
 check "Model:"
-check "OpenRouter API:"
-check "Anthropic API:"
-check "OpenAI API:"
+check "OpenRouter"
 
 echo ""
 if $PASS; then

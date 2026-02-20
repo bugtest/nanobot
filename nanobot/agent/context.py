@@ -1,8 +1,5 @@
 """Context builder for assembling agent prompts."""
 
-import base64
-import mimetypes
-import platform
 from pathlib import Path
 from typing import Any
 
@@ -77,23 +74,16 @@ Skills with available="false" need dependencies installed first - you can try in
         now = datetime.now().strftime("%Y-%m-%d %H:%M (%A)")
         tz = _time.strftime("%Z") or "UTC"
         workspace_path = str(self.workspace.expanduser().resolve())
-        system = platform.system()
-        runtime = f"{'macOS' if system == 'Darwin' else system} {platform.machine()}, Python {platform.python_version()}"
-        
+
         return f"""# nanobot 🐈
 
 You are nanobot, a helpful AI assistant. You have access to tools that allow you to:
 - Read, write, and edit files
 - Execute shell commands
 - Search the web and fetch web pages
-- Send messages to users on chat channels
-- Spawn subagents for complex background tasks
 
 ## Current Time
 {now} ({tz})
-
-## Runtime
-{runtime}
 
 ## Workspace
 Your workspace is at: {workspace_path}
@@ -101,13 +91,7 @@ Your workspace is at: {workspace_path}
 - History log: {workspace_path}/memory/HISTORY.md (grep-searchable)
 - Custom skills: {workspace_path}/skills/{{skill-name}}/SKILL.md
 
-IMPORTANT: When responding to direct questions or conversations, reply directly with your text response.
-Only use the 'message' tool when you need to send a message to a specific chat channel (like WhatsApp).
-For normal conversation, just respond with text - do not call the message tool.
-
-Always be helpful, accurate, and concise. Before calling tools, briefly tell the user what you're about to do (one short sentence in the user's language).
-When remembering something important, write to {workspace_path}/memory/MEMORY.md
-To recall past events, grep {workspace_path}/memory/HISTORY.md"""
+Always be helpful, accurate, and concise."""
     
     def _load_bootstrap_files(self) -> str:
         """Load all bootstrap files from workspace."""
@@ -126,58 +110,21 @@ To recall past events, grep {workspace_path}/memory/HISTORY.md"""
         history: list[dict[str, Any]],
         current_message: str,
         skill_names: list[str] | None = None,
-        media: list[str] | None = None,
-        channel: str | None = None,
-        chat_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Build the complete message list for an LLM call.
-
-        Args:
-            history: Previous conversation messages.
-            current_message: The new user message.
-            skill_names: Optional skills to include.
-            media: Optional list of local file paths for images/media.
-            channel: Current channel (telegram, feishu, etc.).
-            chat_id: Current chat/user ID.
-
-        Returns:
-            List of messages including system prompt.
-        """
+        """Build the complete message list for an LLM call."""
         messages = []
 
         # System prompt
         system_prompt = self.build_system_prompt(skill_names)
-        if channel and chat_id:
-            system_prompt += f"\n\n## Current Session\nChannel: {channel}\nChat ID: {chat_id}"
         messages.append({"role": "system", "content": system_prompt})
 
         # History
         messages.extend(history)
 
-        # Current message (with optional image attachments)
-        user_content = self._build_user_content(current_message, media)
-        messages.append({"role": "user", "content": user_content})
+        # Current message
+        messages.append({"role": "user", "content": current_message})
 
         return messages
-
-    def _build_user_content(self, text: str, media: list[str] | None) -> str | list[dict[str, Any]]:
-        """Build user message content with optional base64-encoded images."""
-        if not media:
-            return text
-        
-        images = []
-        for path in media:
-            p = Path(path)
-            mime, _ = mimetypes.guess_type(path)
-            if not p.is_file() or not mime or not mime.startswith("image/"):
-                continue
-            b64 = base64.b64encode(p.read_bytes()).decode()
-            images.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}})
-        
-        if not images:
-            return text
-        return images + [{"type": "text", "text": text}]
     
     def add_tool_result(
         self,
